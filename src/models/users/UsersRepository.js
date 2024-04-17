@@ -1,42 +1,78 @@
+import pg from "../../database/index.js";
+
+
+
+
 export default class UsersRepository {
   constructor() {
-    this.users = [];
+    this.pg = pg;
   }
 
-  getUsers() {
-    return this.users;
+  async getUsers() {
+   try {
+    const allUsers = await this.pg.manyOrNone("SELECT * FROM userss")
+    return allUsers;
+   } catch (error) {
+    console.error("Failed to get all users",error);
+    throw error;
+   }
   }
 
-  getUserById(id) {
-    const user = this.users.find((user) => user.id === id);
+ async getUserById(id) {
+   try {
+    const user = await this.pg.oneOrNone("SELECT * FROM users WHERE id = $1", id)
+    console.log(user);
     return user;
+   } catch (error) {
+    console.error(`Failed to get all user with id ${id}`, error);
+    throw error;
+   }
   }
 
-  getUserByEmail(email) {
-    const user = this.users.find((user) => user.email === email);
+  async getUserByEmail(email) {
+   try {
+    const user = await this.pg.oneOrNone("SELECT * FROM users WHERE email = $1", email)
     return user;
+   } catch (error) {
+    console.error(`Failed to get all user with ${email}` , error );
+    throw error
+   }
   }
 
-  createUser(user) {
-    this.users.push(user);
-    return user;
+  async createUser(user) {
+   try {
+    console.log(user);
+    await this.pg.none("INSERT INTO users (id, name, email, password) VALUES ($1, $2, $3, $4)", [user.id, user.name, user.email, user.password])
+      return user;
+   } catch (error) {
+    console.error("Failed to create users", error);
+    throw error;
+   }
   }
 
-  updateUser(id, name, email, password) {
-    const user = this.getUserById(id);
+ async updateUser(id, name, email, password) {
+    try {
+      const user = await this.getUserById(id);
 
     if (!user) {
       return null;
     }
 
-    user.name = name;
-    user.email = email;
-    user.password = password;
+   const updatedUser = await this.pg.oneOrNone("UPDATE users SET name = $1, email = $2, password = $3 WHERE id = $4 RETURNING *", [name,email,password,id])
 
-    return user;
+    return updatedUser;
+    } catch (error) {
+      console.error(`Failed to updated user with id ${id}`, error);
+      throw error;
+    }
   }
 
-  deleteUser(id) {
-    this.users = this.users.filter((user) => user.id !== id);
+   async deleteUser(id) {
+    try {
+      await this.pg.none("DELETE FROM users WHERE id = $1", id);
+    } catch (error) {
+      console.error(`Failed to delete with id ${id}`);
+      throw error;
+    }
   }
 }
